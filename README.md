@@ -5,13 +5,14 @@ RL/IRL benchmark with pytorch
 ## Python 
 Python version >= 3.6 
 
-## Install Dependencies
-You can install all of the dependencies by 
+## Install RLFrame
+python setup.py install
 
-> pip install -r requirements.txt
+**TODO: setup.py**
 
 # Getting Started
 TODO
 
 # License
 TODO
+
