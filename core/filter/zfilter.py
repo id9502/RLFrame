@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 from core.filter.filter import Filter
 from core.math.advantage import advantage
 from core.common import StepDictList, SampleTraj, SampleBatch, StepDict, List, ParamDict, InfoDict
@@ -24,19 +25,25 @@ class ZFilter(Filter):
         self.tau = advantage_tau
 
     def init(self):
+        super(ZFilter, self).init()
         self.mean = None
         self.errsum = None
         self.n_step = 0
         self.is_fixed = False
 
     def finalize(self):
+        super(ZFilter, self).finalize()
         self.mean = None
         self.errsum = None
         self.n_step = 0
 
     def reset(self, param: ParamDict):
+        super(ZFilter, self).reset(param)
         self.mean, self.errsum, self.n_step, self.is_fixed =\
             param.require("zfilter mean", "zfilter errsum", "zfilter n_step", "fixed filter")
+        if self.mean is not None:
+            self.mean = self.mean.cpu().numpy()
+            self.errsum = self.errsum.cpu().numpy()
 
     def operate_currentStep(self, current_step: StepDict) -> StepDict:
         """
@@ -47,25 +54,29 @@ class ZFilter(Filter):
         current_step = super(ZFilter, self).operate_currentStep(current_step)
         x = current_step['s']
 
-        if not self.is_fixed:
-            if self.mean is None:
-                self.mean = x.clone()
-                self.errsum = torch.zeros_like(self.mean)
-            else:
-                self.n_step += 1
-                oldM = self.mean.clone()
-                self.mean = self.mean + (x - self.mean) / self.n_step
-                self.errsum = self.errsum + (x - oldM) * (x - self.mean)
+        if self.mean is None:
+            self.mean = x.copy()
+            self.errsum = np.zeros_like(self.mean)
 
-        std = torch.sqrt(self.errsum / (self.n_step - 1)) if self.n_step > 1 else self.mean
+        if not self.is_fixed:
+            self.n_step += 1
+            oldM = self.mean
+            self.mean = self.mean + (x - self.mean) / self.n_step
+            self.errsum = self.errsum + (x - oldM) * (x - self.mean)
+
+        std = np.sqrt(self.errsum / (self.n_step - 1)) if self.n_step > 1 else self.mean
 
         x -= self.mean
         x /= std + 1e-8
         if self.clip is not None:
-            x.clamp_(-self.clip, self.clip)
+            x = x.clip(-self.clip, self.clip)
 
         current_step['s'] = x
         return current_step
+
+    def operate_recordStep(self, last_step: StepDict) -> StepDict:
+        last_step = super(ZFilter, self).operate_recordStep(last_step)
+        return last_step
 
     def operate_stepList(self, step_list: StepDictList, done: bool) -> SampleTraj:
         traj = super(ZFilter, self).operate_stepList(step_list, done)
@@ -76,8 +87,8 @@ class ZFilter(Filter):
         traj["advantages"] = advantages
         traj["returns"] = returns
 
-        traj["filter state dict"] = {"zfilter mean": self.mean.clone(),
-                                     "zfilter errsum": self.errsum.clone(),
+        traj["filter state dict"] = {"zfilter mean": self.mean.copy(),
+                                     "zfilter errsum": self.errsum.copy(),
                                      "zfilter n_step": self.n_step,
                                      "fixed filter": self.is_fixed}
         return traj
@@ -107,12 +118,10 @@ class ZFilter(Filter):
 
     def getStateDict(self) -> ParamDict:
         state_dict = super(ZFilter, self).getStateDict()
-        return state_dict + ParamDict({"zfilter mean": self.mean,
-                                       "zfilter errsum": self.errsum,
+        return state_dict + ParamDict({"zfilter mean": torch.as_tensor(self.mean, dtype=torch.float32, device=torch.device("cpu")) if self.mean is not None else None,
+                                       "zfilter errsum": torch.as_tensor(self.errsum, dtype=torch.float32, device=torch.device("cpu")) if self.errsum is not None else None,
                                        "zfilter n_step": self.n_step,
                                        "fixed filter": self.is_fixed})
 
     def to_device(self, device: torch.device):
-        if self.mean is not None:
-            self.mean.to(device)
-            self.errsum.to(device)
+        super(ZFilter, self).to_device(device)

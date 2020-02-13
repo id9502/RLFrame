@@ -7,11 +7,12 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from core.model import Policy
 from core.logger import Logger
 from core.filter.zfilter import ZFilter
-from core.agent import Agent_async as Agent
 from core.algorithm.trpo import trpo_step
+from core.agent import Agent_sync as Agent
 from core.common import ParamDict, ARGConfig, ARG
 from core.utilities import running_time, model_dir, loadInitConfig
 from environment import FakeGym
+# from environment import FakeRLBench
 
 
 default_config = ARGConfig(
@@ -117,7 +118,7 @@ def main(cfg):
 
     filter_op = ZFilter(gamma, tau)
     env = FakeGym(env_name)
-    # env = RLBench("ReachTarget")
+    # env = FakeRLBench("ReachTarget")
     policy = Policy(cfg, env.info())
     agent = Agent(cfg, env, policy, filter_op)
 

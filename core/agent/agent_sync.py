@@ -109,10 +109,10 @@ class Agent_sync(Agent):
         np.random.seed(seed)
         torch.manual_seed(seed)
         environment.init(display=False)
+        filter_op.to_device(torch.device("cpu"))
         filter_op.init()
-        filter_op.to_device(device)
-        policy.init()
         policy.to_device(device)
+        policy.init()
 
         # -1: syncing, 0: waiting for new command, 1: sampling
         local_state = 0

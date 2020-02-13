@@ -132,8 +132,8 @@ class Agent_async(Agent):
         np.random.seed(seed)
         torch.manual_seed(seed)
         environment.init(display=False)
-        filter_op.init()
         filter_op.to_device(torch.device("cpu"))
+        filter_op.init()
         # -1: syncing, 0: waiting for command, 1: waiting for action
         local_state = 0
         step_buffer = []
@@ -210,8 +210,8 @@ class Agent_async(Agent):
         random.seed(seed)
         np.random.seed(seed)
         torch.manual_seed(seed)
-        policy.init()
         policy.to_device(device)
+        policy.init()
         # -1: syncing, 0: waiting for state
         local_state = 0
         max_batchsz = 8

@@ -4,10 +4,10 @@ from core.common.types import StepDict
 from core.environment.environment import Environment
 
 
-class EnvironmentImpl(Environment):
+class FakeGymEnv(Environment):
 
     def __init__(self, task_name: str):
-        super(EnvironmentImpl, self).__init__(task_name)
+        super(FakeGymEnv, self).__init__(task_name)
         self._render = False
         self._env = gym.make(task_name)
         self._info["action dim"] = self._env.action_space.shape

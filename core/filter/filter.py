@@ -15,7 +15,6 @@ class Filter(object):
 
     def __init__(self):
         self.device = torch.device("cpu")
-        pass
 
     def init(self):
         pass
@@ -30,15 +29,12 @@ class Filter(object):
         """
         decorate current stepDict before transferring to policy net
         """
-        current_step['s'] = torch.as_tensor(current_step['s'], dtype=torch.float32, device=self.device)
         return current_step
 
     def operate_recordStep(self, last_step: StepDict) -> StepDict:
         """
         decorate last stepDict before putting to step memory
         """
-        last_step['a'] = torch.as_tensor(last_step['a'], dtype=torch.float32, device=self.device)
-        last_step['r'] = torch.as_tensor([last_step['r']], dtype=torch.float32, device=self.device)
         return last_step
 
     def operate_stepList(self, step_list: StepDictList, done: bool) -> SampleTraj:
@@ -46,9 +42,9 @@ class Filter(object):
         decorate step memory of one roll-out epoch and form single trajectory dict,
                  must contain keyword "trajectory", "done", "length", "reward sum"
         """
-        states = torch.stack([step['s'] for step in step_list], dim=0)
-        actions = torch.stack([step['a'] for step in step_list], dim=0)
-        rewards = torch.stack([step['r'] for step in step_list], dim=0)
+        states = torch.as_tensor([step['s'] for step in step_list], dtype=torch.float32, device=self.device)
+        actions = torch.as_tensor([step['a'] for step in step_list], dtype=torch.float32, device=self.device)
+        rewards = torch.as_tensor([[step['r']] for step in step_list], dtype=torch.float32, device=self.device)
         return {"states": states,
                 "actions": actions,
                 "rewards": rewards,
@@ -68,8 +64,8 @@ class Filter(object):
         actions = torch.cat(actions, dim=0)
         rewards = torch.cat(rewards, dim=0)
 
-        steps = torch.as_tensor([b["step"] for b in traj_list], dtype=torch.int)
-        rsums = torch.as_tensor([b["rsum"] for b in traj_list], dtype=torch.float32)
+        steps = torch.as_tensor([b["step"] for b in traj_list], dtype=torch.int, device=self.device)
+        rsums = torch.as_tensor([b["rsum"] for b in traj_list], dtype=torch.float32, device=self.device)
 
         batch = {"states": states,
                  "actions": actions,

@@ -3,6 +3,7 @@ from core.model.policy import Policy
 from core.model.nets.mlp_critic import ValueNet
 from core.model.nets.mlp_policy import PolicyNet
 from core.common import StepDictList, ParamDict
+from core.utilities.convenience import cpu_state_dict
 
 
 __all__ = ["PolicyWithValue"]
@@ -43,12 +44,15 @@ class PolicyWithValue(Policy):
 
     def step(self, current_step_list: StepDictList) -> StepDictList:
         state = [cs['s'] for cs in current_step_list]
-        state = torch.stack(state, dim=0).to(dtype=torch.float32, device=self.device)
+        if isinstance(state[0], torch.Tensor):
+            state = torch.stack(state, dim=0).to(dtype=torch.float32, device=self.device)
+        else:
+            state = torch.as_tensor(state, dtype=torch.float32, device=self.device)
         value = self.value_net(state)
         action = self.policy_net.select_action(state, deterministic=self.is_fixed)
         for i, cs in enumerate(current_step_list):
-            cs['a'] = action[i].data.cpu()
-            cs['v'] = value[i].cpu()
+            cs['a'] = action[i].cpu().numpy()
+            cs['v'] = value[i].item()
         return current_step_list
 
     def reset(self, param: ParamDict):
@@ -61,8 +65,8 @@ class PolicyWithValue(Policy):
         self.policy_net.load_state_dict(policy)
 
     def getStateDict(self) -> ParamDict:
-        return ParamDict({"value state_dict": self.value_net.state_dict(),
-                          "policy state_dict": self.policy_net.state_dict()})
+        return ParamDict({"value state_dict": cpu_state_dict(self.value_net.state_dict()),
+                          "policy state_dict": cpu_state_dict(self.policy_net.state_dict())})
 
     def to_device(self, device: torch.device):
         super().to_device(device)

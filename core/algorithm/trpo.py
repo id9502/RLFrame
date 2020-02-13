@@ -56,7 +56,7 @@ def update_value_net(value_net, states, returns, l2_reg):
 
         # weight decay
         for param in value_net.parameters():
-            value_loss += param.pow(2).sum() * l2_reg
+            value_loss = value_loss + param.pow(2).sum() * l2_reg
         value_loss.backward()
         return value_loss
 

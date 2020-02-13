@@ -35,10 +35,10 @@ class Agent(object):
         # filter which will be copied to child thread and also be kept in main thread
         self._filter = deepcopy(filter_op)
 
-        self._filter.init()
         self._filter.to_device(self.device)
-        self._policy.init()
+        self._filter.init()
         self._policy.to_device(self.device)
+        self._policy.init()
 
     def __del__(self):
         self._filter.finalize()

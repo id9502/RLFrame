@@ -1,9 +1,6 @@
 from core.common.types import StepDict, InfoDict, StringList
 
 
-__all__ = []
-
-
 class Environment(object):
 
     def __init__(self, task_name: str):
