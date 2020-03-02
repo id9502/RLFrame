@@ -41,9 +41,6 @@ class ZFilter(Filter):
         super(ZFilter, self).reset(param)
         self.mean, self.errsum, self.n_step, self.is_fixed =\
             param.require("zfilter mean", "zfilter errsum", "zfilter n_step", "fixed filter")
-        if self.mean is not None:
-            self.mean = self.mean.cpu().numpy()
-            self.errsum = self.errsum.cpu().numpy()
 
     def operate_currentStep(self, current_step: StepDict) -> StepDict:
         """
@@ -118,8 +115,8 @@ class ZFilter(Filter):
 
     def getStateDict(self) -> ParamDict:
         state_dict = super(ZFilter, self).getStateDict()
-        return state_dict + ParamDict({"zfilter mean": torch.as_tensor(self.mean, dtype=torch.float32, device=torch.device("cpu")) if self.mean is not None else None,
-                                       "zfilter errsum": torch.as_tensor(self.errsum, dtype=torch.float32, device=torch.device("cpu")) if self.errsum is not None else None,
+        return state_dict + ParamDict({"zfilter mean": self.mean,
+                                       "zfilter errsum": self.errsum,
                                        "zfilter n_step": self.n_step,
                                        "fixed filter": self.is_fixed})
 

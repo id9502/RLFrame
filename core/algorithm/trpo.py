@@ -3,7 +3,7 @@ from core.math import cg
 from torch.optim.adam import Adam
 from torch.optim.lbfgs import LBFGS
 from core.model.policy_with_value import PolicyWithValue
-from core.common import StepDictList, ParamDict
+from core.common import SampleBatch, ParamDict
 
 
 def line_search(model, f, x, fullstep, expected_improve_full, max_backtracks=10, accept_ratio=0.1):
@@ -63,7 +63,7 @@ def update_value_net(value_net, states, returns, l2_reg):
     optimizer.step(closure)
 
 
-def trpo_step(config: ParamDict, batch: StepDictList, policy: PolicyWithValue):
+def trpo_step(config: ParamDict, batch: SampleBatch, policy: PolicyWithValue):
     max_kl, damping, l2_reg = config.require("max kl", "damping", "l2 reg")
     states, actions, advantages, returns = get_tensor(batch, policy.device)
 

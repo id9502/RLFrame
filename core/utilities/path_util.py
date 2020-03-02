@@ -1,7 +1,4 @@
-#!/usr/bin/env python3
-
 import os
-from glob import glob
 from core.common.config import ParamDict
 
 
@@ -31,12 +28,11 @@ def log_dir(config: ParamDict):
     return log_path
 
 
-if __name__ == "__main__":
-    assets_path = assets_dir()
-    os.system("clear")
-    print("Experiment manager >>>")
-    a = glob(os.path.join(assets_path, "*"), recursive=True)
-    print(a)
-    #os.symlink()
-    #print("↑/↓ for selecting item, D for delete, c for ")
-
+def demo_dir(*sub_path):
+    """
+    :param sub_path: sub folder under '/dataset', will be concatenated together
+    :return: full path to demo folder or demo package
+    """
+    demo_path = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../dataset"))
+    demo_path = os.path.join(demo_path, *sub_path)
+    return demo_path

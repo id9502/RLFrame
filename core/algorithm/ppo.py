@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from torch.optim.adam import Adam
 from core.model.policy_with_value import PolicyWithValue
-from core.common import StepDictList, ParamDict
+from core.common import SampleBatch, ParamDict
 
 
 def get_tensor(batch, device):
@@ -23,7 +23,7 @@ def update_value_net(value_net, optimizer, states, returns):
         optimizer.step()
 
 
-def ppo_step(config: ParamDict, batch: StepDictList, policy: PolicyWithValue):
+def ppo_step(config: ParamDict, batch: SampleBatch, policy: PolicyWithValue):
     lr, l2_reg, clip_epsilon, policy_iter, i_iter, max_iter, mini_batch_sz = \
         config.require("lr", "l2 reg", "clip eps", "optimize policy epochs",
                        "current training iter", "max iter", "optimize batch size")

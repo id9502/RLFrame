@@ -42,5 +42,6 @@ class FakeGymEnv(Environment):
         if self._render:
             self._env.render()
         last_step['r'] = r
-        next_step = {'s': s, "info": info}
+        last_step["info"] = info
+        next_step = {'s': s}
         return last_step, next_step, done

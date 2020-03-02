@@ -6,4 +6,7 @@ def safe_div(a, b, f=1e7):
         r = a * f
     else:
         r = a / b
-    return torch.clamp(r, -f, f)
+    if isinstance(r, float):
+        return max(min(r, f), -f)
+    else:
+        return torch.clamp(r, -f, f)

@@ -1,9 +1,9 @@
 from core.common import ParamDict
 # import interface class instead of its implementation
-from core.environment.environment import Environment
+from core.agent.agent import Agent
 from core.model.policy import Policy
 from core.filter.filter import Filter
-from core.agent.agent import Agent
+from core.environment.environment import Environment
 
 
 class Agent_single(Agent):

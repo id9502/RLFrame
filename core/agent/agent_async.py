@@ -4,7 +4,7 @@ import numpy as np
 from time import sleep
 from copy import deepcopy
 from core.common import ParamDict
-from core.utilities.gpu_tool import decide_device
+from core.utilities import decide_device
 from torch.multiprocessing import Process, Pipe, Value, Lock
 # import interface class instead of its implementation
 from core.agent.agent import Agent

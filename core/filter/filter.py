@@ -45,12 +45,20 @@ class Filter(object):
         states = torch.as_tensor([step['s'] for step in step_list], dtype=torch.float32, device=self.device)
         actions = torch.as_tensor([step['a'] for step in step_list], dtype=torch.float32, device=self.device)
         rewards = torch.as_tensor([[step['r']] for step in step_list], dtype=torch.float32, device=self.device)
-        return {"states": states,
-                "actions": actions,
-                "rewards": rewards,
-                "step": rewards.nelement(),
-                "rsum": rewards.sum(dtype=torch.float32),
-                "done": done}
+        sample_traj = {
+            "states": states,
+            "actions": actions,
+            "rewards": rewards,
+            "step": rewards.nelement(),
+            "rsum": rewards.sum(dtype=torch.float32),
+            "done": done
+        }
+        if "display reward" in step_list[0]["info"]:
+            display_reward = torch.as_tensor([[step["info"]["display reward"]] for step in step_list],
+                                             dtype=torch.float32, device=self.device)
+            sample_traj["display rewards"] = display_reward
+            sample_traj["display rsum"] = display_reward.sum(dtype=torch.float32)
+        return sample_traj
 
     def operate_trajectoryList(self, traj_list: List[SampleTraj]) -> (SampleBatch, InfoDict, ParamDict):
         """
@@ -72,6 +80,10 @@ class Filter(object):
                  "rewards": rewards}
         info = {"rsums": rsums,
                 "steps": steps}
+
+        if "display rewards" in traj_list[0]:
+            display_rsums = torch.as_tensor([b["display rsum"] for b in traj_list], dtype=torch.float32, device=self.device)
+            info["display rsums"] = display_rsums
         return batch, info
 
     def getStateDict(self) -> ParamDict:

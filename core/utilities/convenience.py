@@ -1,8 +1,8 @@
 import os
 from copy import deepcopy
-from core.utilities import model_dir
 from inspect import getmembers, isclass
-from core.common import Config, Type, ModuleType, Tuple
+from core.utilities import model_dir, DemoLoader, demo_dir
+from core.common import Config, Type, ModuleType, Tuple, ParamDict
 
 
 def loadInitConfig(default_cfg: Config):
@@ -16,6 +16,20 @@ def loadInitConfig(default_cfg: Config):
     cfg.register_item("policy state dict", None, fields=["save"])
     cfg.register_item("filter state dict", None, fields=["save"])
 
+    # load demos if it exists
+    if "demo path" in cfg:
+        demo_path = cfg.require("demo path")
+        demo_loader = DemoLoader()
+        if os.path.isfile(cfg["demo path"]):
+            demo_loader.load_file(demo_path)
+        elif os.path.isfile(demo_dir(cfg["demo path"])):
+            demo_loader.load_file(demo_dir(cfg["demo path"]))
+
+        cfg.register_item("demo loader", demo_loader)
+        if "filter state dict" in demo_loader.info():
+            cfg["filter state dict"] = ParamDict(demo_loader.info()["filter state dict"])
+
+    # load saved model if it exists
     if os.path.isfile(saved_name):
         cfg.load(saved_name, "this")
         print(f"Find saved model at {saved_name}, try loading from it")

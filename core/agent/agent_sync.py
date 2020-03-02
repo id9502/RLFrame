@@ -5,7 +5,7 @@ from time import sleep
 from copy import deepcopy
 from torch.multiprocessing import Process, Pipe, Value, Lock
 from core.common.config import ParamDict
-from core.utilities.gpu_tool import decide_device
+from core.utilities import decide_device
 # import interface class instead of its implementation
 from core.agent.agent import Agent
 from core.model.policy import Policy

@@ -1,4 +1,5 @@
-from .path_tool import assets_dir, model_dir
-from .gpu_tool import decide_device
-from .timeit_tool import running_time
+from .path_util import assets_dir, model_dir, log_dir, demo_dir
+from .gpu_util import decide_device
+from .timeit_util import running_time, t2str
+from .demo_util import DemoLoader
 from .convenience import loadInitConfig

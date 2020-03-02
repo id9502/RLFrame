@@ -4,7 +4,8 @@ from rlbench.environment import SUPPORTED_ROBOTS
 from rlbench.observation_config import ObservationConfig
 from rlbench.action_modes import ArmActionMode, ActionMode
 from rlbench.environment import Environment as RLEnvironment
-from core.common import StepDict
+from rlbench.task_environment import _DT, Quaternion
+from core.common import StepDict, SampleBatch
 from core.environment.environment import Environment
 from core.utilities.convenience import all_class_names, get_named_class
 from .stdout_footpad import suppress_stdout
@@ -100,6 +101,7 @@ class FakeRLBenchEnv(Environment):
 
         obs, reward, terminate = self.task.step(last_step['a'])
         last_step['r'] = reward
+        last_step["info"] = {}
         next_step = {"opt": None}
 
         if self._observation_mode == "state" or self._observation_mode == "all":
@@ -141,7 +143,7 @@ class FakeRLBenchEnv(Environment):
                 env.shutdown()
                 del task
                 del env
-
+            self._info["time step"] = _DT
             self._info["state dim"] = tuple(obs.get_low_dim_data().shape)
             self._info["state low"] = np.ones(self._info["state dim"], dtype=np.float32) * -np.inf
             self._info["state high"] = np.ones(self._info["state dim"], dtype=np.float32) * np.inf
@@ -157,6 +159,67 @@ class FakeRLBenchEnv(Environment):
             self._info["wrist rgb high"] = np.ones(self._info["wrist rgb dim"], dtype=np.float32)
         self._info["reward low"] = -np.inf
         self._info["reward high"] = np.inf
+
+    def live_demo(self, amount: int, random: bool = True) -> SampleBatch:
+        """
+        :param amount: number of demonstration trajectories to be generated
+        :param random: if the starting position is random
+        :return: observation list : [amount x [(steps-1) x [s, a] + [s_term, None]]],
+                 WARNING: that the action here is calculated from observation, when executing, they may cause some inaccuracy
+        """
+        self.task._static_positions = not random
+        pack = self.task.get_demos(amount, True)
+
+        demo_pack = []
+        for traj in pack:
+            demo_traj = []
+            for o1, o2 in zip(traj[:-1], traj[1:]):
+                action = []
+                if self._action_config.arm == ArmActionMode.ABS_JOINT_VELOCITY:
+                    action.extend((o2.joint_positions - o1.joint_positions) / _DT)
+                elif self._action_config.arm == ArmActionMode.ABS_JOINT_POSITION:
+                    action.extend(o2.joint_positions)
+                elif self._action_config.arm == ArmActionMode.ABS_JOINT_TORQUE:
+                    action.extend(o2.joint_forces)
+                elif self._action_config.arm == ArmActionMode.ABS_EE_POSE:
+                    action.extend(o2.gripper_pose)
+                elif self._action_config.arm == ArmActionMode.ABS_EE_VELOCITY:
+                    # WARNING: This calculating method is not so accurate since rotation cannot be directed 'add' together
+                    #          since the original RLBench decides to do so, we should follow it
+                    action.extend((o2.gripper_pose - o1.gripper_pose) / _DT)
+                elif self._action_config.arm == ArmActionMode.DELTA_JOINT_VELOCITY:
+                    action.extend(o2.joint_velocities - o1.joint_velocities)
+                elif self._action_config.arm == ArmActionMode.DELTA_JOINT_POSITION:
+                    action.extend(o2.joint_positions - o1.joint_positions)
+                elif self._action_config.arm == ArmActionMode.DELTA_JOINT_TORQUE:
+                    action.extend(o2.joint_forces - o1.joint_forces)
+                elif self._action_config.arm == ArmActionMode.DELTA_EE_POSE:
+                    action.extend(o2.gripper_pose[:3] - o1.gripper_pose[:3])
+                    q = Quaternion(o2.gripper_pose[3:7]) * Quaternion(o1.gripper_pose[3:7]).conjugate
+                    action.extend(list(q))
+                elif self._action_config.arm == ArmActionMode.DELTA_EE_VELOCITY:
+                    # WARNING: This calculating method is not so accurate since rotation cannot be directed 'add' together
+                    #          since the original RLBench decides to do so, we should follow it
+                    if len(demo_traj) == 0:
+                        action.extend((o2.gripper_pose - o1.gripper_pose) / _DT)
+                    else:
+                        action.extend((o2.gripper_pose - o1.gripper_pose) / _DT - demo_traj[-1][1])
+
+                action.append(1.0 if o2.gripper_open > 0.9 else 0.0)
+                action = np.asarray(action, dtype=np.float32)
+                demo_traj.append({'observation': o1,
+                                  'a': action,
+                                  's': o1.get_low_dim_data()})
+            demo_pack.append(demo_traj)
+        return {"trajectory": demo_pack,
+                "config": "default",
+                "policy": "hand-coding",
+                "env class": self.__class__.__name__,
+                "env name": self._task_name,
+                "env config": "default",
+                "observation config": self._observation_mode,
+                "robot config": self._robot_name,
+                "action config": self._action_mode}
 
 
 if __name__ == "__main__":
