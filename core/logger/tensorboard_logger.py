@@ -62,10 +62,13 @@ class TensorBoardLogger(Logger):
                 if isinstance(info[key], (int, float)) or\
                         (isinstance(info[key], (np.ndarray, torch.Tensor, list, tuple)) and len(info[key]) == 1):
                     self.loggerx.add_scalar(key, info[key], self._epoch_train)
-                elif isinstance(info[key], (np.ndarray, torch.Tensor, tuple, list)):
-                    self.loggerx.add_scalar(f"{key}-max", np.asarray(info[key]).max(), self._epoch_train)
-                    self.loggerx.add_scalar(f"{key}-min", np.asarray(info[key]).min(), self._epoch_train)
-                    self.loggerx.add_scalar(f"{key}-avg", np.asarray(info[key]).mean(), self._epoch_train)
+                elif isinstance(info[key], (np.ndarray, torch.Tensor)):
+                    self.loggerx.add_scalar(f"{key}-max", info[key].max(), self._epoch_train)
+                    self.loggerx.add_scalar(f"{key}-min", info[key].min(), self._epoch_train)
+                    self.loggerx.add_scalar(f"{key}-avg", info[key].mean(), self._epoch_train)
+                elif isinstance(info[key], (tuple, list)):
+                    self.loggerx.add_scalar(f"{key}-max", max(info[key]), self._epoch_train)
+                    self.loggerx.add_scalar(f"{key}-min", min(info[key]), self._epoch_train)
 
         self._epoch_train += 1
 
@@ -109,10 +112,13 @@ class TensorBoardLogger(Logger):
                 if isinstance(info[key], (int, float)) or\
                         (isinstance(info[key], (np.ndarray, torch.Tensor, list, tuple)) and len(info[key]) == 1):
                     self.loggerx.add_scalar(f"val-{key}", info[key], self._epoch_val)
-                elif isinstance(info[key], (np.ndarray, torch.Tensor, tuple, list)):
-                    self.loggerx.add_scalar(f"val-{key}-max", np.asarray(info[key]).max(), self._epoch_val)
-                    self.loggerx.add_scalar(f"val-{key}-min", np.asarray(info[key]).min(), self._epoch_val)
-                    self.loggerx.add_scalar(f"val-{key}-avg", np.asarray(info[key]).mean(), self._epoch_val)
+                elif isinstance(info[key], (np.ndarray, torch.Tensor)):
+                    self.loggerx.add_scalar(f"val-{key}-max", info[key].max(), self._epoch_val)
+                    self.loggerx.add_scalar(f"val-{key}-min", info[key].min(), self._epoch_val)
+                    self.loggerx.add_scalar(f"val-{key}-avg", info[key].mean(), self._epoch_val)
+                elif isinstance(info[key], (tuple, list)):
+                    self.loggerx.add_scalar(f"val-{key}-max", max(info[key]), self._epoch_val)
+                    self.loggerx.add_scalar(f"val-{key}-min", min(info[key]), self._epoch_val)
 
         with open(os.path.join(self._log_dir, f"{self.default_name}.log"), 'a') as f:
             f.write(message)
