@@ -51,7 +51,7 @@ class PolicyWithValue(Policy):
         value = self.value_net(state)
         action = self.policy_net.select_action(state, deterministic=self.is_fixed)
         for i, cs in enumerate(current_step_list):
-            cs['a'] = action[i].cpu().numpy()
+            cs['a'] = action[i].detach().cpu().numpy()
             cs['v'] = value[i].item()
         return current_step_list
 

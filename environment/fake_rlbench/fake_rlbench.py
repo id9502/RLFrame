@@ -68,17 +68,6 @@ class FakeRLBenchEnv(Environment):
             self.env.launch()
             self.task = self.env.get_task(get_named_class(self._task_name, tasks))
 
-    def _extract_obs(self, obs):
-        if self._observation_mode == 'state':
-            return obs.get_low_dim_data()
-        elif self._observation_mode == 'vision':
-            return {
-                "state": obs.get_low_dim_data(),
-                "left_shoulder_rgb": obs.left_shoulder_rgb,
-                "right_shoulder_rgb": obs.right_shoulder_rgb,
-                "wrist_rgb": obs.wrist_rgb,
-            }
-
     def reset(self, random: bool = True) -> StepDict:
         self.task._static_positions = not random
         descriptions, obs = self.task.reset()
@@ -223,11 +212,25 @@ class FakeRLBenchEnv(Environment):
 
 
 if __name__ == "__main__":
+    import bz2
+    import pickle
     from time import sleep
+
+    # normal rl environment test
     e = FakeRLBenchEnv("CloseMicrowave")
-    e.init(False)
+    e.init(display=False)
     e.reset()
     for i in range(10):
         e.step({'a': np.random.randn(*e.info()["action dim"])})
         sleep(0.1)
+
     e.finalize()
+
+    # generate demonstrations
+    env = FakeRLBenchEnv("PutUmbrellaInUmbrellaStand")
+    env.init(display=True)
+    pack = env.live_demo(10, False)
+    with bz2.BZ2File("demo_10x_PutUmbrellaInUmbrellaStand.pkl", "wb") as f:
+        pickle.dump(pack, f)
+
+    env.finalize()

@@ -57,3 +57,9 @@ class Agent_single(Agent):
 
         batch, info = self._filter.operate_trajectoryList(self._replay_buffer)
         return batch, info
+
+    def verify(self, config: ParamDict):
+        self._environment.finalize()
+        rets = super(Agent_single, self).verify(config)
+        self._environment.init(display=False)
+        return rets

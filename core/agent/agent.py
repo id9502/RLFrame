@@ -93,22 +93,37 @@ class Agent(object):
         return self._filter
 
     # environment and policy should be inited outside this call, policy should also be reset
-    def verify(self, config: ParamDict, environment: Environment):
-        max_iter, max_step, random = \
-            config.require("verify iter", "verify max step", "verify random")
+    def verify(self, config: ParamDict):
+        policy_state, filter_state, max_step, max_iter, display, fixed_env, fixed_policy, fixed_filter =\
+             config.require("policy state dict", "filter state dict", "trajectory max step", "max iter", "display",
+                            "fixed environment", "fixed policy", "fixed filter")
 
-        r_sum = [0.]
-        for _ in range(max_iter):
-            current_step = environment.reset(random=random)
+        policy_state["fixed policy"] = fixed_policy
+        filter_state["fixed filter"] = fixed_filter
+
+        self._environment.init(display=display)
+        self._policy.reset(policy_state)
+        self._filter.reset(filter_state)
+
+        r_sum = []
+        for i in range(max_iter):
+            current_step = self._environment.reset(random=not fixed_env)
             # sampling
+            r_sum.append(0.)
+            i_step = 0
             for _ in range(max_step):
+                current_step = self._filter.operate_currentStep(current_step)
                 last_step = self._policy.step([current_step])[0]
-                last_step, current_step, done = environment.step(last_step)
-                r_sum[-1] += last_step['r']
+                last_step, current_step, done = self._environment.step(last_step)
+                record_step = self._filter.operate_recordStep(last_step)
+                r_sum[-1] += record_step['r']
+                i_step += 1
                 if done:
                     break
+            print(f"Verification iter {i}: reward={r_sum[-1]}; step={i_step}")
         # finalization
-        r_sum = torch.as_tensor(r_sum, dtype=torch.float32, device=self.device)
+        self._environment.finalize()
+        r_sum = np.asarray(r_sum, dtype=np.float32)
         r_sum_mean = r_sum.mean()
         r_sum_std = r_sum.std()
         r_sum_max = r_sum.max()
