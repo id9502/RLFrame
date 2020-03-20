@@ -16,7 +16,7 @@ from environment import FakeRLBench
 default_config = ARGConfig(
     "PyTorch Demo Replay example",
 
-    ARG("load name", "dataset/learned/final.pkl", desc="name of pre-trained model"),
+    ARG("load name", "/home/jmx/Workspace/Python/Local/RLFrame/dataset/learned/final.pkl", desc="name of pre-trained model"),
 
     # ---- program config ---- #
     ARG("verify iter", 5, desc="maximal number of training iterations (default: {})"),
@@ -31,7 +31,7 @@ def replay_loop(cfg, agent):
     validate_cfg = ParamDict({
         "policy state dict": cfg["policy state dict"],
         "filter state dict": cfg["filter state dict"],
-        "trajectory max step": 128,
+        "trajectory max step": 64,
         "max iter": max_iter,
         "display": display,
         "fixed environment": False,

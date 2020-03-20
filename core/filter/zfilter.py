@@ -14,7 +14,7 @@ class ZFilter(Filter):
     using running estimates of mean,std
     """
 
-    def __init__(self, advantage_gamma, advantage_tau, clip=10.):
+    def __init__(self, advantage_gamma, advantage_tau, clip=10., enable=True):
         super(ZFilter, self).__init__()
         self.clip = clip
         self.mean = None
@@ -23,6 +23,7 @@ class ZFilter(Filter):
         self.is_fixed = False
         self.gamma = advantage_gamma
         self.tau = advantage_tau
+        self.enable = enable
 
     def init(self):
         super(ZFilter, self).init()
@@ -49,11 +50,15 @@ class ZFilter(Filter):
         :return:
         """
         current_step = super(ZFilter, self).operate_currentStep(current_step)
+
         x = current_step['s']
 
         if self.mean is None:
-            self.mean = x.copy()
+            self.mean = x.copy() if self.enable else np.zeros_like(x)
             self.errsum = np.zeros_like(self.mean)
+
+        if not self.enable:
+            return current_step
 
         if not self.is_fixed:
             self.n_step += 1

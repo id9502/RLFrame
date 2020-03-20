@@ -11,13 +11,13 @@ from core.algorithm.trpo import trpo_step
 from core.agent import Agent_sync as Agent
 from core.common import ParamDict, ARGConfig, ARG
 from core.utilities import running_time, model_dir, loadInitConfig
-from environment import FakeGym
-# from environment import FakeRLBench
+# from environment import FakeGym
+from environment import FakeRLBench
 
 
 default_config = ARGConfig(
     "PyTorch TRPO example",
-    ARG("env name", "MountainCarContinuous-v0", critical=True, desc="name of the environment to run"),
+    ARG("env name", "ReachTarget", critical=True, desc="name of the environment to run"),
     ARG("tag", "default", desc="tag of this experiment"),
     ARG("short", "trpo", critical=True, desc="short name of this method"),
 
@@ -41,8 +41,8 @@ default_config = ARGConfig(
     ARG("max iter", 5000, desc="maximal number of training iterations (default: {})"),
     ARG("eval batch size", 4, desc="batch size used for evaluations (default: {})"),
     ARG("eval interval", 1, desc="interval between evaluations (default: {})"),
-    ARG("save interval", 500, desc="interval between saving (default: {}, 0, means never save)"),
-    ARG("threads", 4, desc="number of threads for agent (default: {})"),
+    ARG("save interval", 100, desc="interval between saving (default: {}, 0, means never save)"),
+    ARG("threads", 8, desc="number of threads for agent (default: {})"),
     ARG("gpu threads", 2, desc="number of threads for agent (default: {})"),
     ARG("gpu", (0, 1, 2, 3), desc="tuple of available GPUs, empty for cpu only"),
 )
@@ -56,7 +56,7 @@ def train_loop(cfg, agent, logger):
     training_cfg = ParamDict({
         "policy state dict": agent.policy().getStateDict(),
         "filter state dict": agent.filter().getStateDict(),
-        "trajectory max step": 1024,
+        "trajectory max step": 64,
         "batch size": batch_sz,
         "fixed environment": False,
         "fixed policy": False,
@@ -65,7 +65,7 @@ def train_loop(cfg, agent, logger):
     validate_cfg = ParamDict({
         "policy state dict": None,
         "filter state dict": None,
-        "trajectory max step": 1024,
+        "trajectory max step": 64,
         "batch size": eval_batch_sz,
         "fixed environment": False,
         "fixed policy": True,
@@ -117,8 +117,8 @@ def main(cfg):
     logger.init(cfg)
 
     filter_op = ZFilter(gamma, tau, enable=use_zf)
-    env = FakeGym(env_name)
-    # env = FakeRLBench("ReachTarget")
+    # env = FakeGym(env_name)
+    env = FakeRLBench(env_name)
     policy = Policy(cfg, env.info())
     agent = Agent(cfg, env, policy, filter_op)
 

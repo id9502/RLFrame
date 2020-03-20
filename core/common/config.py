@@ -133,7 +133,7 @@ class Config(ParamDict):
             has_key = False
             for key in self._fields:
                 if s in self._fields[key]:
-                    ret[s] = self._items[s]
+                    ret[key] = self._items[key]
                     has_key = True
             if not has_key:
                 raise KeyError(f"Field {s} is required but not existed in Config")

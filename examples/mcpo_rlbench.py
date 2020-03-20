@@ -1,27 +1,29 @@
 #!/usr/bin/env python3
 import os
 import sys
+import torch
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from core.model import Policy
 from core.logger import Logger
 from core.filter.zfilter import ZFilter
-from core.algorithm.trpo import trpo_step
+from core.algorithm.mcpo import mcpo_step
 from core.agent import Agent_sync as Agent
 from core.common import ParamDict, ARGConfig, ARG
 from core.utilities import running_time, model_dir, loadInitConfig
-from environment import FakeGym
-# from environment import FakeRLBench
+# from environment import FakeGym
+from environment import FakeRLBench
 
 
 default_config = ARGConfig(
-    "PyTorch TRPO example",
-    ARG("env name", "MountainCarContinuous-v0", critical=True, desc="name of the environment to run"),
-    ARG("tag", "default", desc="tag of this experiment"),
-    ARG("short", "trpo", critical=True, desc="short name of this method"),
+    "PyTorch MC-PO example",
+    ARG("env name", "ReachTarget", critical=True, desc="name of the environment to run"),
+    ARG("tag", "new_r", desc="tag of this experiment"),
+    ARG("short", "mcpo", critical=True, desc="short name of this method"),
 
     ARG("load name", "~final.pkl", desc="name of pre-trained model"),
+    ARG("demo path", "RLBench/50_ReachTarget.demo.pkl", desc="demo package path"),
     # ---- model parameters ---- #
     ARG("activation", "tanh", critical=True,
         desc="activation function name('tanh', 'sigmoid', 'relu')"),
@@ -33,6 +35,10 @@ default_config = ARGConfig(
     ARG("l2 reg", 1.e-3, critical=True, desc="l2 regularization regression (default: {})"),
     ARG("lr", 1.e-4, critical=True, desc="Learning rate (default: {})"),
     ARG("max kl", 1.e-2, critical=True, desc="max kl value (default: {})"),
+    ARG("bc method", "l2", critical=True, desc="method for determining distance (default: {})"),
+    ARG("constraint", 0., critical=True, desc="constraint limit of behavior discrepancy (default: {})"),
+    ARG("constraint factor", 1.e-3, critical=True, desc="constraint limit growth along iter (default: {})"),
+    ARG("constraint max", 10., critical=True, desc="constraint max growth along iter (default: {})"),
     ARG("seed", 1, critical=True, desc="random seed (default: {})"),
     ARG("use zfilter", True, critical=True, desc="filter the state when running (default {})"),
 
@@ -41,7 +47,7 @@ default_config = ARGConfig(
     ARG("max iter", 5000, desc="maximal number of training iterations (default: {})"),
     ARG("eval batch size", 4, desc="batch size used for evaluations (default: {})"),
     ARG("eval interval", 1, desc="interval between evaluations (default: {})"),
-    ARG("save interval", 500, desc="interval between saving (default: {}, 0, means never save)"),
+    ARG("save interval", 50, desc="interval between saving (default: {}, 0, means never save)"),
     ARG("threads", 4, desc="number of threads for agent (default: {})"),
     ARG("gpu threads", 2, desc="number of threads for agent (default: {})"),
     ARG("gpu", (0, 1, 2, 3), desc="tuple of available GPUs, empty for cpu only"),
@@ -49,14 +55,14 @@ default_config = ARGConfig(
 
 
 def train_loop(cfg, agent, logger):
-    curr_iter, max_iter, eval_iter, eval_batch_sz, batch_sz, save_iter =\
+    curr_iter, max_iter, eval_iter, eval_batch_sz, batch_sz, save_iter, demo_loader =\
         cfg.require("current training iter", "max iter", "eval interval",
-                    "eval batch size", "batch size", "save interval")
+                    "eval batch size", "batch size", "save interval", "demo loader")
 
     training_cfg = ParamDict({
         "policy state dict": agent.policy().getStateDict(),
         "filter state dict": agent.filter().getStateDict(),
-        "trajectory max step": 1024,
+        "trajectory max step": 64,
         "batch size": batch_sz,
         "fixed environment": False,
         "fixed policy": False,
@@ -65,20 +71,45 @@ def train_loop(cfg, agent, logger):
     validate_cfg = ParamDict({
         "policy state dict": None,
         "filter state dict": None,
-        "trajectory max step": 1024,
+        "trajectory max step": 64,
         "batch size": eval_batch_sz,
         "fixed environment": False,
         "fixed policy": True,
         "fixed filter": True
     })
 
+    # we use the entire demo set without sampling
+    demo_trajectory = demo_loader.generate_all()
+    if demo_trajectory is None:
+        print("Warning: No demo loaded, fall back compatible with TRPO method")
+    else:
+        print("Info: Demo loaded successfully")
+        demo_actions = []
+        demo_states = []
+        for p in demo_trajectory:
+            demo_actions.append(torch.as_tensor([t['a'] for t in p], dtype=torch.float32, device=agent.policy().device))
+            demo_states.append(torch.as_tensor([t['s'] for t in p], dtype=torch.float32, device=agent.policy().device))
+        demo_states = torch.cat(demo_states, dim=0)
+        demo_actions = torch.cat(demo_actions, dim=0)
+        demo_trajectory = [demo_states, demo_actions]
+
     for i_iter in range(curr_iter, max_iter):
 
         s_time = float(running_time(fmt=False))
 
-        """sample new batch and perform TRPO update"""
+        """sample new batch and perform MCPO update"""
         batch_train, info_train = agent.rollout(training_cfg)
-        trpo_step(cfg, batch_train, agent.policy())
+
+        demo_batch = None
+        if demo_trajectory is not None:
+            filter_dict = agent.filter().getStateDict()
+            errsum, mean, n_step = filter_dict["zfilter errsum"], filter_dict["zfilter mean"], filter_dict["zfilter n_step"]
+            errsum = torch.as_tensor(errsum, dtype=torch.float32, device=agent.policy().device)
+            mean = torch.as_tensor(mean, dtype=torch.float32, device=agent.policy().device)
+            std = torch.sqrt(errsum / (n_step - 1)) if n_step > 1 else mean
+            demo_batch = ((demo_trajectory[0] - mean) / (std + 1e-8), demo_trajectory[1])
+
+        mcpo_step(cfg, batch_train, agent.policy(), demo_batch)
 
         e_time = float(running_time(fmt=False))
 
@@ -117,8 +148,8 @@ def main(cfg):
     logger.init(cfg)
 
     filter_op = ZFilter(gamma, tau, enable=use_zf)
-    env = FakeGym(env_name)
-    # env = FakeRLBench("ReachTarget")
+    # env = FakeGym(env_name)
+    env = FakeRLBench(env_name)
     policy = Policy(cfg, env.info())
     agent = Agent(cfg, env, policy, filter_op)
 

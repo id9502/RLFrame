@@ -38,19 +38,17 @@ def suppress_stdout():
         devnull_fd = devnull.fileno()
 
         def _redirect_stdout(to_fd):
-            sys.stdout.close()
+            # sys.stdout.close()
             os.dup2(to_fd, original_stdout_fd)
-
-            sys.stdout = os.fdopen(original_stdout_fd, 'w')
+            # sys.stdout = os.fdopen(original_stdout_fd, 'w')
 
         def _redirect_stderr(to_fd):
-            sys.stderr.close()
+            # sys.stderr.close()
             os.dup2(to_fd, original_stderr_fd)
-
-            sys.stderr = os.fdopen(original_stderr_fd, 'w')
+            # sys.stderr = os.fdopen(original_stderr_fd, 'w')
 
         saved_stdout_fd = os.dup(original_stdout_fd)
-        saved_stderr_fd = os.dup(original_stderr_fd)
+        # saved_stderr_fd = os.dup(original_stderr_fd)
 
         try:
             _redirect_stdout(devnull_fd)

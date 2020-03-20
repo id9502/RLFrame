@@ -1,8 +1,12 @@
 import os
-from core.common.config import ParamDict
+import random
+from core.common.config import Config
 
 
-def _makedir(path):
+__all__ = ["makedir", "assets_dir", "model_dir", "log_dir", "demo_dir"]
+
+
+def makedir(path):
     if not os.path.exists(path):
         print(f"Making dir '{path}'")
         os.makedirs(path, exist_ok=True)
@@ -10,21 +14,41 @@ def _makedir(path):
 
 def assets_dir():
     assets_path = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../assets"))
-    _makedir(assets_path)
+    makedir(assets_path)
     return assets_path
 
 
-def model_dir(config: ParamDict):
-    env_name, tag, short, seed = config.require("env name", "tag", "short", "seed")
-    model_path = os.path.join(assets_dir(), f"{tag}-{env_name}-{short}-{seed}", "model")
-    _makedir(model_path)
+def _name_str_from_cfg(config: Config):
+    naming_param = config.require_field("naming")
+    name = ""
+    seed = random.randint(0, 10000)
+    if "tag" in naming_param:
+        name += f"{naming_param.pop('tag')}-"
+    if "env name" in naming_param:
+        name += f"{naming_param.pop('env name')}-"
+    if "short" in naming_param:
+        name += f"{naming_param.pop('short')}-"
+    if "seed" in naming_param:
+        seed = naming_param.pop("seed")
+
+    for k in naming_param:
+        name += f"{naming_param[k]}-"
+
+    name += f"{seed}"
+    return name
+
+
+def model_dir(config: Config):
+    name = _name_str_from_cfg(config)
+    model_path = os.path.join(assets_dir(), name, "model")
+    makedir(model_path)
     return model_path
 
 
-def log_dir(config: ParamDict):
-    env_name, tag, short, seed = config.require("env name", "tag", "short", "seed")
-    log_path = os.path.join(assets_dir(), f"{tag}-{env_name}-{short}-{seed}", "log")
-    _makedir(log_path)
+def log_dir(config: Config):
+    name = _name_str_from_cfg(config)
+    log_path = os.path.join(assets_dir(), name, "log")
+    makedir(log_path)
     return log_path
 
 

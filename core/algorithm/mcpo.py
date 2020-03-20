@@ -193,7 +193,7 @@ def mcpo_step(config: ParamDict, batch: SampleBatch, policy: PolicyWithValue, de
         get_tensor(batch, demo, policy.device)
 
     # ---- annealing on constraint tolerance ---- #
-    d = min(d_init + d_factor * i_iter, d_max)
+    d = min(d_init + (d_factor * i_iter) ** 2, d_max)
 
     # ---- update critic ---- #
     update_value_net(policy.value_net, states, returns, l2_reg)

@@ -37,7 +37,7 @@ default_config = ARGConfig(
     ARG("max kl", 1.e-2, critical=True, desc="max kl value (default: {})"),
     ARG("bc method", "l2", critical=True, desc="method for determining distance (default: {})"),
     ARG("constraint", 0., critical=True, desc="constraint limit of behavior discrepancy (default: {})"),
-    ARG("constraint factor", 1.e-4, critical=True, desc="constraint limit growth along iter (default: {})"),
+    ARG("constraint factor", 1.e-3, critical=True, desc="constraint limit growth along iter (default: {})"),
     ARG("constraint max", 10., critical=True, desc="constraint max growth along iter (default: {})"),
     ARG("seed", 1, critical=True, desc="random seed (default: {})"),
     ARG("use zfilter", True, critical=True, desc="filter the state when running (default {})"),
@@ -97,9 +97,19 @@ def train_loop(cfg, agent, logger):
 
         s_time = float(running_time(fmt=False))
 
-        """sample new batch and perform TRPO update"""
+        """sample new batch and perform MCPO update"""
         batch_train, info_train = agent.rollout(training_cfg)
-        mcpo_step(cfg, batch_train, agent.policy(), demo_trajectory)
+
+        demo_batch = None
+        if demo_trajectory is not None:
+            filter_dict = agent.filter().getStateDict()
+            errsum, mean, n_step = filter_dict["zfilter errsum"], filter_dict["zfilter mean"], filter_dict["zfilter n_step"]
+            errsum = torch.as_tensor(errsum, dtype=torch.float32, device=agent.policy().device)
+            mean = torch.as_tensor(mean, dtype=torch.float32, device=agent.policy().device)
+            std = torch.sqrt(errsum / (n_step - 1)) if n_step > 1 else mean
+            demo_batch = ((demo_trajectory[0] - mean) / (std + 1e-8), demo_trajectory[1])
+
+        mcpo_step(cfg, batch_train, agent.policy(), demo_batch)
 
         e_time = float(running_time(fmt=False))
 
@@ -131,13 +141,13 @@ def train_loop(cfg, agent, logger):
 
 
 def main(cfg):
-    env_name, gamma, tau, policy_state, filter_state =\
-        cfg.require("env name", "advantage gamma", "advantage tau", "policy state dict", "filter state dict")
+    env_name, use_zf, gamma, tau, policy_state, filter_state =\
+        cfg.require("env name", "use zfilter", "advantage gamma", "advantage tau", "policy state dict", "filter state dict")
 
     logger = Logger()
     logger.init(cfg)
 
-    filter_op = ZFilter(gamma, tau)
+    filter_op = ZFilter(gamma, tau, enable=use_zf)
     env = FakeGym(env_name)
     # env = FakeRLBench("ReachTarget")
     policy = Policy(cfg, env.info())
