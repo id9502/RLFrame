@@ -27,7 +27,7 @@ class FakeRLBenchEnv(Environment):
                    "delta effector position": ArmActionMode.DELTA_EE_POSE}
 
     def __init__(self, task_name: str, observation_mode: str = "state",
-                 action_mode: str = "joint velocity", robot_name: str = "panda"):
+                 action_mode: str = "delta joint position", robot_name: str = "panda"):
         super(FakeRLBenchEnv, self).__init__(task_name)
         if task_name not in all_class_names(tasks):
             raise KeyError(f"Error: unknown task name {task_name}")

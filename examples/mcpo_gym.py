@@ -5,22 +5,25 @@ import torch
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from core.model import Policy
 from core.logger import Logger
 from core.filter.zfilter import ZFilter
 from core.algorithm.mcpo import mcpo_step
 from core.agent import Agent_sync as Agent
+from core.model import PolicyWithValue as Policy
 from core.common import ParamDict, ARGConfig, ARG
 from core.utilities import running_time, model_dir, loadInitConfig
 from environment import FakeGym
-# from environment import FakeRLBench
 
 
 default_config = ARGConfig(
     "PyTorch MC-PO example",
-    ARG("env name", "SparseMountainCarContinuous-v0", critical=True, desc="name of the environment to run"),
-    ARG("tag", "default", desc="tag of this experiment"),
-    ARG("short", "mcpo", critical=True, desc="short name of this method"),
+    ARG("env name", "SparseMountainCarContinuous-v0", critical=True, fields=["naming"],
+        desc="name of the environment to run"),
+    ARG("tag", "default", fields=["naming"],
+        desc="tag of this experiment"),
+    ARG("short", "mcpo", critical=True, fields=["naming"],
+        desc="short name of this method"),
+    ARG("seed", 1, critical=True, fields=["naming"], desc="random seed (default: {})"),
 
     ARG("load name", "~final.pkl", desc="name of pre-trained model"),
     ARG("demo path", "imitation/imperfect_MountainCarContinuous-v0.demo.pkl", desc="demo package path"),
@@ -39,7 +42,6 @@ default_config = ARGConfig(
     ARG("constraint", 0., critical=True, desc="constraint limit of behavior discrepancy (default: {})"),
     ARG("constraint factor", 1.e-3, critical=True, desc="constraint limit growth along iter (default: {})"),
     ARG("constraint max", 10., critical=True, desc="constraint max growth along iter (default: {})"),
-    ARG("seed", 1, critical=True, desc="random seed (default: {})"),
     ARG("use zfilter", True, critical=True, desc="filter the state when running (default {})"),
 
     # ---- program config ---- #
@@ -149,7 +151,6 @@ def main(cfg):
 
     filter_op = ZFilter(gamma, tau, enable=use_zf)
     env = FakeGym(env_name)
-    # env = FakeRLBench("ReachTarget")
     policy = Policy(cfg, env.info())
     agent = Agent(cfg, env, policy, filter_op)
 

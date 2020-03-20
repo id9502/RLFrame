@@ -19,7 +19,6 @@ class PolicyWithValue(Policy):
         # which will fill-in action dim and state dim fields
         assert "state dim" in env_info and "action dim" in env_info,\
             f"Error: Key 'state dim' or 'action dim' not in env_info, which only contains {env_info.keys()}"
-        gamma, tau = config_dict.require("advantage gamma", "advantage tau")
         super(PolicyWithValue, self).__init__()
 
         self.value_net = None
@@ -28,8 +27,6 @@ class PolicyWithValue(Policy):
         # TODO: do some actual work here
         self._action_dim = env_info["action dim"]
         self._state_dim = env_info["state dim"]
-        self._advantage_gamma = gamma
-        self._advantage_tau = tau
         self.is_fixed = False
 
     def init(self):

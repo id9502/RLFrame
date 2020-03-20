@@ -4,10 +4,10 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from core.model import Policy
 from core.agent import Agent as Agent
 from core.filter.zfilter import ZFilter
 from core.utilities import loadInitConfig
+from core.model import PolicyWithValue as Policy
 from core.common import ParamDict, ARGConfig, ARG
 from environment import FakeGym
 from environment import FakeRLBench
@@ -16,10 +16,10 @@ from environment import FakeRLBench
 default_config = ARGConfig(
     "PyTorch Demo Replay example",
 
-    ARG("load name", "/home/jmx/Workspace/Python/Local/RLFrame/dataset/learned/final.pkl", desc="name of pre-trained model"),
+    ARG("load name", "/home/jmx/Workspace/Python/Local/RLFrame/dataset/learned/final_mcpo.pkl", desc="name of pre-trained model"),
 
     # ---- program config ---- #
-    ARG("verify iter", 5, desc="maximal number of training iterations (default: {})"),
+    ARG("verify iter", 10, desc="maximal number of training iterations (default: {})"),
     ARG("verify display", True, desc="whither display the GUI form or not (default: {})"),
     ARG("gpu", (0, 1, 2, 3), save=False, desc="tuple of available GPUs, empty for cpu only"),
 )

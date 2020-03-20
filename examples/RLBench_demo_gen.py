@@ -10,19 +10,22 @@ from core.utilities import assets_dir, makedir
 
 default_config = ARGConfig(
     "RLBench demo generator example",
-    ARG("env name", "ReachTarget", desc="name of the environment to run"),
-    ARG("save name", os.path.join("RLBench", "10_ReachTarget.demo.pkl"), desc="path for saving generated demos"),
+    ARG("env name", "ReachTarget", critical=True, fields=["naming"],
+        desc="name of the environment to run"),
+    ARG("action mode", "delta joint position", critical=True, fields=["naming"],
+        desc="name of the action mode, (default: {})"),
+    ARG("seed", 1, critical=True, fields=["naming"], desc="random seed (default: {})"),
+
+    ARG("save name", os.path.join("RLBench", "50_ReachTarget.demo.pkl"), desc="path for saving generated demos"),
 
     # ---- simulation config
     ARG("observation mode", "state", desc="observation mode, could be ['state', 'vision', 'all'] (default: {})"),
-    ARG("action mode", "joint velocity", desc="action mode (default: {})"),
     ARG("robot name", "panda", desc="robot to be used (default: {})"),
 
     # ---- program config ---- #
-    ARG("demo size", 10, desc="number of demo trajectories to be generated (default: {})"),
+    ARG("demo size", 50, desc="number of demo trajectories to be generated (default: {})"),
     ARG("demo random", True, desc="whether the generated demos are random inited (default: {})"),
-    ARG("display", True, desc="whether use GUI form or not (default: {}"),
-    ARG("seed", 1, desc="random seed, (default: {})"),
+    ARG("display", False, desc="whether use GUI form or not (default: {}"),
 )
 
 

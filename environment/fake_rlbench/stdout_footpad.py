@@ -48,7 +48,7 @@ def suppress_stdout():
             # sys.stderr = os.fdopen(original_stderr_fd, 'w')
 
         saved_stdout_fd = os.dup(original_stdout_fd)
-        # saved_stderr_fd = os.dup(original_stderr_fd)
+        saved_stderr_fd = os.dup(original_stderr_fd)
 
         try:
             _redirect_stdout(devnull_fd)

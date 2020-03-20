@@ -4,22 +4,27 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from core.model import Policy
 from core.logger import Logger
 from core.filter.zfilter import ZFilter
 from core.algorithm.trpo import trpo_step
 from core.agent import Agent_sync as Agent
+from core.model import PolicyWithValue as Policy
 from core.common import ParamDict, ARGConfig, ARG
 from core.utilities import running_time, model_dir, loadInitConfig
-# from environment import FakeGym
 from environment import FakeRLBench
 
 
 default_config = ARGConfig(
     "PyTorch TRPO example",
-    ARG("env name", "ReachTarget", critical=True, desc="name of the environment to run"),
-    ARG("tag", "default", desc="tag of this experiment"),
-    ARG("short", "trpo", critical=True, desc="short name of this method"),
+    ARG("env name", "ReachTarget", critical=True, fields=["naming"],
+        desc="name of the environment to run"),
+    ARG("action mode", "delta joint position", critical=True, fields=["naming"],
+        desc="name of the action mode, (default: {})"),
+    ARG("tag", "default", fields=["naming"],
+        desc="tag of this experiment"),
+    ARG("short", "trpo", critical=True, fields=["naming"],
+        desc="short name of this method"),
+    ARG("seed", 1, critical=True, fields=["naming"], desc="random seed (default: {})"),
 
     ARG("load name", "~final.pkl", desc="name of pre-trained model"),
     # ---- model parameters ---- #
@@ -33,7 +38,6 @@ default_config = ARGConfig(
     ARG("l2 reg", 1.e-3, critical=True, desc="l2 regularization regression (default: {})"),
     ARG("lr", 1.e-4, critical=True, desc="Learning rate (default: {})"),
     ARG("max kl", 1.e-2, critical=True, desc="max kl value (default: {})"),
-    ARG("seed", 1, critical=True, desc="random seed (default: {})"),
     ARG("use zfilter", True, critical=True, desc="filter the state when running (default {})"),
 
     # ---- program config ---- #
@@ -110,15 +114,14 @@ def train_loop(cfg, agent, logger):
 
 
 def main(cfg):
-    env_name, use_zf, gamma, tau, policy_state, filter_state =\
-        cfg.require("env name", "use zfilter", "advantage gamma", "advantage tau", "policy state dict", "filter state dict")
+    env_name, action_mode, use_zf, gamma, tau, policy_state, filter_state =\
+        cfg.require("env name", "action mode", "use zfilter", "advantage gamma", "advantage tau", "policy state dict", "filter state dict")
 
     logger = Logger()
     logger.init(cfg)
 
     filter_op = ZFilter(gamma, tau, enable=use_zf)
-    # env = FakeGym(env_name)
-    env = FakeRLBench(env_name)
+    env = FakeRLBench(env_name, action_mode=action_mode)
     policy = Policy(cfg, env.info())
     agent = Agent(cfg, env, policy, filter_op)
 

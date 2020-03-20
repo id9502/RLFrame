@@ -85,6 +85,9 @@ class TensorBoardLogger(Logger):
             steps = info["steps"]
             message += f"S: {steps.min():<4d}~{steps.max():<4d}; "
 
+        if "loss" in info:
+            message += f"L: {info['loss']:<8.4f}; "
+
         if "duration" in info:
             message += f"Time={t2str(info['duration'])} "
 

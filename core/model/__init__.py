@@ -1,4 +1,5 @@
-from .policy_with_value import PolicyWithValue as Policy
+from .policy_only import PolicyOnly as Policy
+from .policy_with_value import PolicyWithValue
 
 
 def make_model():
