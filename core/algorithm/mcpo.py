@@ -43,7 +43,8 @@ def mcpo_optim(g, b, c, Hvp_f, delta, bc_step_f):
     # if x @ H @ x = c^2 / s < delta,
     #       there should be at least one x that satisfies constraints, use dual solver to find solution
     if safe_div(c*c, s) > 2. * delta:
-        if c >= 0:
+        # we add some tolerance here for overcome numerical error on calculation
+        if c > -1.e-14:
             # pure TRPO here, no limit check needs in line search
             # dx     = -1/lambda * H^-1 @ g
             # lambda = sqrt(0.5*q/delta)
