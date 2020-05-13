@@ -41,7 +41,7 @@ default_config = ARGConfig(
     ARG("lr", 1.e-4, critical=True, desc="Learning rate (default: {})"),
     ARG("max kl", 1.e-2, critical=True, desc="max kl value (default: {})"),
     ARG("bc method", "l2", critical=True, desc="method for determining distance (default: {})"),
-    ARG("constraint", -5.e-3, critical=True, desc="constraint limit of behavior discrepancy (default: {})"),
+    ARG("constraint", -6.e-3, critical=True, desc="constraint limit of behavior discrepancy (default: {})"),
     ARG("constraint factor", 1.e-3, critical=True, desc="constraint limit growth along iter (default: {})"),
     ARG("constraint max", 10., critical=True, desc="constraint max growth along iter (default: {})"),
     ARG("use zfilter", True, critical=True, desc="filter the state when running (default {})"),

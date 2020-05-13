@@ -56,14 +56,14 @@ class Agent(object):
         """
         raise NotImplementedError
 
-    def collect(self) -> Union[None, Tuple[SampleBatch, InfoDict, ParamDict]]:
+    def collect(self) -> Union[None, Tuple[SampleBatch, InfoDict]]:
         """
         Return batches of samples, will return None if not ready, used after calling broadcast()
         :return:
         """
         raise NotImplementedError
 
-    def rollout(self, *arg, **argv) -> Tuple[SampleBatch, InfoDict, ParamDict]:
+    def rollout(self, *arg, **argv) -> Tuple[SampleBatch, InfoDict]:
         """
         Similar as calling broadcast + collect
         :param arg:

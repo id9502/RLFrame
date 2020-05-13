@@ -20,15 +20,18 @@ class PolicyOnly(Policy):
             f"Error: Key 'state dim' or 'action dim' not in env_info, which only contains {env_info.keys()}"
         super(PolicyOnly, self).__init__()
 
+        activation = config_dict.require("activation")
+
         self.policy_net = None
 
         # TODO: do some actual work here
         self._action_dim = env_info["action dim"]
         self._state_dim = env_info["state dim"]
         self.is_fixed = False
+        self._activation = activation
 
     def init(self):
-        self.policy_net = PolicyNet(self._state_dim, self._action_dim)
+        self.policy_net = PolicyNet(self._state_dim, self._action_dim, activation=self._activation)
         self.policy_net.to(self.device)
 
     def finalize(self):

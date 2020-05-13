@@ -23,7 +23,7 @@ def suppress_stdout():
     try:
         # If we are using an IDE, then this will fail
         original_stdout_fd = sys.stdout.fileno()
-        original_stderr_fd = sys.stderr.fileno()
+        #original_stderr_fd = sys.stderr.fileno()
     except io.UnsupportedOperation:
         # Nothing we can do about this, just don't suppress
         yield
@@ -48,14 +48,14 @@ def suppress_stdout():
             # sys.stderr = os.fdopen(original_stderr_fd, 'w')
 
         saved_stdout_fd = os.dup(original_stdout_fd)
-        saved_stderr_fd = os.dup(original_stderr_fd)
+        #saved_stderr_fd = os.dup(original_stderr_fd)
 
         try:
             _redirect_stdout(devnull_fd)
-            _redirect_stderr(devnull_fd)
+            #_redirect_stderr(devnull_fd)
             yield
             _redirect_stdout(saved_stdout_fd)
-            _redirect_stderr(saved_stderr_fd)
+            #_redirect_stderr(saved_stderr_fd)
         finally:
             os.close(saved_stdout_fd)
-            os.close(saved_stderr_fd)
+            #os.close(saved_stderr_fd)

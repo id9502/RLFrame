@@ -192,7 +192,7 @@ class FakeRLBenchEnv(Environment):
                     if len(demo_traj) == 0:
                         action.extend((o2.gripper_pose - o1.gripper_pose) / _DT)
                     else:
-                        action.extend((o2.gripper_pose - o1.gripper_pose) / _DT - demo_traj[-1][1])
+                        action.extend((o2.gripper_pose - o1.gripper_pose) / _DT - demo_traj[-1]['a'])
 
                 action.append(1.0 if o2.gripper_open > 0.9 else 0.0)
                 action = np.asarray(action, dtype=np.float32)

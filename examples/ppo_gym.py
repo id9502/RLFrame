@@ -35,6 +35,7 @@ default_config = ARGConfig(
     ARG("l2 reg", 1.e-3, critical=True, desc="l2 regularization regression (default: {})"),
     ARG("lr", 3.e-4, critical=True, desc="Learning rate (default: {})"),
     ARG("clip eps", 0.2, critical=True, desc="clipping epsilon for PPO (default: {})"),
+    ARG("use zfilter", True, critical=True, desc="filter the state when running (default {})"),
 
     # ---- program config ---- #
     ARG("optimize batch size", 64, desc="batch size for optimization (default: {})"),

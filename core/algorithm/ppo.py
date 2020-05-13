@@ -1,8 +1,8 @@
 import torch
-import numpy as np
 from torch.optim.adam import Adam
 from core.model.policy_with_value import PolicyWithValue
 from core.common import SampleBatch, ParamDict
+import torch.nn.functional as F
 
 
 def get_tensor(batch, device):
@@ -13,21 +13,11 @@ def get_tensor(batch, device):
     return states, actions, advantages, returns
 
 
-def update_value_net(value_net, optimizer, states, returns):
-    for _ in range(25):
-        optimizer.zero_grad()
-        values_pred = value_net(states)
-        value_loss = (values_pred - returns).pow(2).mean()
-        value_loss.backward()
-        torch.nn.utils.clip_grad_norm_(value_net.parameters(), 0.5)
-        optimizer.step()
-
-
 def ppo_step(config: ParamDict, batch: SampleBatch, policy: PolicyWithValue):
     lr, l2_reg, clip_epsilon, policy_iter, i_iter, max_iter, mini_batch_sz = \
         config.require("lr", "l2 reg", "clip eps", "optimize policy epochs",
                        "current training iter", "max iter", "optimize batch size")
-    lam_entropy = 0.0
+    lam_entropy = 0.
     states, actions, advantages, returns = get_tensor(batch, policy.device)
 
     lr_mult = max(1.0 - i_iter / max_iter, 0.)
@@ -39,31 +29,33 @@ def ppo_step(config: ParamDict, batch: SampleBatch, policy: PolicyWithValue):
     with torch.no_grad():
         fixed_log_probs = policy.policy_net.get_log_prob(states, actions).detach()
 
-    inds = torch.arange(states.size(0))
-
     for _ in range(policy_iter):
-        np.random.shuffle(inds)
+        inds = torch.randperm(states.size(0))
 
         """perform mini-batch PPO update"""
-        for i_b in range(int(np.ceil(inds.size(0) / mini_batch_sz))):
-            ind = inds[i_b * mini_batch_sz: min((i_b+1) * mini_batch_sz, inds.size(0))]
+        for i_b in range(inds.size(0) // mini_batch_sz):
+            slc = slice(i_b * mini_batch_sz, (i_b+1) * mini_batch_sz)
 
-            states_i = states[ind]
-            actions_i = actions[ind]
-            returns_i = returns[ind]
-            advantages_i = advantages[ind]
-            log_probs_i = fixed_log_probs[ind]
+            states_i = states[slc]
+            actions_i = actions[slc]
+            returns_i = returns[slc]
+            advantages_i = advantages[slc]
+            log_probs_i = fixed_log_probs[slc]
 
             """update critic"""
-            update_value_net(policy.value_net, optimizer_value, states_i, returns_i)
+            for _ in range(1):
+                value_loss = F.mse_loss(policy.value_net(states_i), returns_i)
+                optimizer_value.zero_grad()
+                value_loss.backward()
+                torch.nn.utils.clip_grad_norm_(policy.value_net.parameters(), 0.5)
+                optimizer_value.step()
 
             """update policy"""
             log_probs, entropy = policy.policy_net.get_log_prob_entropy(states_i, actions_i)
             ratio = torch.exp(log_probs - log_probs_i)
             surr1 = ratio * advantages_i
             surr2 = torch.clamp(ratio, 1.0 - clip_epsilon, 1.0 + clip_epsilon) * advantages_i
-            policy_surr = -torch.min(surr1, surr2).mean()
-            policy_surr = policy_surr - entropy.mean() * lam_entropy
+            policy_surr = -torch.min(surr1, surr2).mean() - entropy.mean() * lam_entropy
             optimizer_policy.zero_grad()
             policy_surr.backward()
             torch.nn.utils.clip_grad_norm_(policy.policy_net.parameters(), 0.5)

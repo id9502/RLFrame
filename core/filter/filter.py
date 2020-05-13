@@ -60,7 +60,7 @@ class Filter(object):
             sample_traj["display rsum"] = display_reward.sum(dtype=torch.float32)
         return sample_traj
 
-    def operate_trajectoryList(self, traj_list: List[SampleTraj]) -> (SampleBatch, InfoDict, ParamDict):
+    def operate_trajectoryList(self, traj_list: List[SampleTraj]) -> (SampleBatch, InfoDict):
         """
         decorate trajectory list before return to user
         """

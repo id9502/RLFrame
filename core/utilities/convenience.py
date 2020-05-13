@@ -22,8 +22,10 @@ def loadInitConfig(default_cfg: Config):
         demo_loader = DemoLoader()
         if os.path.isfile(cfg["demo path"]):
             demo_loader.load_file(demo_path)
+            print(f"Info: loading Demo from file {demo_path}")
         elif os.path.isfile(demo_dir(cfg["demo path"])):
             demo_loader.load_file(demo_dir(cfg["demo path"]))
+            print(f"Info: loading Demo from file {demo_dir(cfg['demo path'])}")
 
         cfg.register_item("demo loader", demo_loader)
         if "filter state dict" in demo_loader.info():
@@ -32,12 +34,12 @@ def loadInitConfig(default_cfg: Config):
     # load saved model if it exists
     if os.path.isfile(saved_name):
         cfg.load(saved_name, "this")
-        print(f"Find saved model at {saved_name}, try loading from it")
+        print(f"Info: try loading saved model from {saved_name}")
     else:
         saved_name = os.path.join(model_dir(cfg), saved_name)
         if os.path.isfile(saved_name):
             cfg.load(saved_name, "this")
-            print(f"Find saved model at {saved_name}, try loading from it")
+            print(f"Info: try loading saved model from {saved_name}")
 
     return cfg
 

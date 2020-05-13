@@ -185,7 +185,7 @@ def update_value_net(value_net, states, returns, l2_reg):
     optimizer.step(closure)
 
 
-def mcpo_step(config: ParamDict, batch: SampleBatch, policy: PolicyWithValue, demo: StepDictList = None):
+def mcpo_step(config: ParamDict, batch: SampleBatch, policy: PolicyWithValue, demo = None):
     global mmd_cache
     max_kl, damping, l2_reg, bc_method, d_init, d_factor, d_max, i_iter = \
         config.require("max kl", "damping", "l2 reg", "bc method", "constraint", "constraint factor", "constraint max",
@@ -224,7 +224,7 @@ def mcpo_step(config: ParamDict, batch: SampleBatch, policy: PolicyWithValue, de
         if oversample > 0:
             sample_a = Normal(torch.zeros_like(a), torch.ones_like(a)).sample((oversample,)) * var + a
             sample_s = demo_states.expand(oversample, -1, -1)
-            from_policy = torch.cat((sample_s, sample_a), dim=2).view(-1, s.size(-1) + a.size(-1))
+            from_policy = torch.cat((sample_s, sample_a), dim=2).view(-1, demo_states.size(-1) + a.size(-1))
         else:
             from_policy = torch.cat((demo_states, a + 0. * var), dim=1)
 
