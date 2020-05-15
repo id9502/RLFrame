@@ -9,6 +9,7 @@ from core.common import StepDict, SampleBatch
 from core.environment.environment import Environment
 from core.utilities.convenience import all_class_names, get_named_class
 from .stdout_footpad import suppress_stdout
+import random as rnd
 
 
 class FakeRLBenchEnv(Environment):
@@ -82,9 +83,6 @@ class FakeRLBenchEnv(Environment):
             next_step["wrist_rgb"] = obs.wrist_rgb
         return next_step
 
-    def render(self):
-        self.env.render()
-
     def step(self, last_step: StepDict) -> (StepDict, bool):
         assert 'a' in last_step, "Key 'a' for action not in last_step, maybe you passed a wrong dict ?"
 
@@ -156,49 +154,62 @@ class FakeRLBenchEnv(Environment):
         :return: observation list : [amount x [(steps-1) x [s, a] + [s_term, None]]],
                  WARNING: that the action here is calculated from observation, when executing, they may cause some inaccuracy
         """
+        seeds = [rnd.randint(0, 4096) for _ in range(amount)]
         self.task._static_positions = not random
-        pack = self.task.get_demos(amount, True)
 
         demo_pack = []
-        for traj in pack:
+        for seed in seeds:
+            np.random.seed(seed)
+            pack = self.task.get_demos(1, True)[0]
+
             demo_traj = []
-            for o1, o2 in zip(traj[:-1], traj[1:]):
+            np.random.seed(seed)
+            desc, obs = self.task.reset()
+            v_tar = 0.
+            for o_tar in pack[1:]:
                 action = []
                 if self._action_config.arm == ArmActionMode.ABS_JOINT_VELOCITY:
-                    action.extend((o2.joint_positions - o1.joint_positions) / _DT)
+                    action.extend((o_tar.joint_positions - obs.joint_positions) / _DT)
                 elif self._action_config.arm == ArmActionMode.ABS_JOINT_POSITION:
-                    action.extend(o2.joint_positions)
+                    action.extend(o_tar.joint_positions)
                 elif self._action_config.arm == ArmActionMode.ABS_JOINT_TORQUE:
-                    action.extend(o2.joint_forces)
+                    action.extend(o_tar.joint_forces)
+                    raise TypeError("Warning, abs_joint_torque is not currently supported")
                 elif self._action_config.arm == ArmActionMode.ABS_EE_POSE:
-                    action.extend(o2.gripper_pose)
+                    action.extend(o_tar.gripper_pose)
                 elif self._action_config.arm == ArmActionMode.ABS_EE_VELOCITY:
                     # WARNING: This calculating method is not so accurate since rotation cannot be directed 'add' together
                     #          since the original RLBench decides to do so, we should follow it
-                    action.extend((o2.gripper_pose - o1.gripper_pose) / _DT)
+                    action.extend((o_tar.gripper_pose - obs.gripper_pose) / _DT)
                 elif self._action_config.arm == ArmActionMode.DELTA_JOINT_VELOCITY:
-                    action.extend(o2.joint_velocities - o1.joint_velocities)
+                    v_tar = (o_tar.joint_positions - obs.joint_positions) / _DT
+                    action.extend(v_tar - obs.joint_velocities)
+                    raise TypeError("Warning, delta_joint_velocity is not currently supported")
                 elif self._action_config.arm == ArmActionMode.DELTA_JOINT_POSITION:
-                    action.extend(o2.joint_positions - o1.joint_positions)
+                    action.extend(o_tar.joint_positions - obs.joint_positions)
                 elif self._action_config.arm == ArmActionMode.DELTA_JOINT_TORQUE:
-                    action.extend(o2.joint_forces - o1.joint_forces)
+                    action.extend(o_tar.joint_forces - obs.joint_forces)
+                    raise TypeError("Warning, delta_joint_torque is not currently supported")
                 elif self._action_config.arm == ArmActionMode.DELTA_EE_POSE:
-                    action.extend(o2.gripper_pose[:3] - o1.gripper_pose[:3])
-                    q = Quaternion(o2.gripper_pose[3:7]) * Quaternion(o1.gripper_pose[3:7]).conjugate
+                    action.extend(o_tar.gripper_pose[:3] - obs.gripper_pose[:3])
+                    q = Quaternion(o_tar.gripper_pose[3:7]) * Quaternion(obs.gripper_pose[3:7]).conjugate
                     action.extend(list(q))
                 elif self._action_config.arm == ArmActionMode.DELTA_EE_VELOCITY:
                     # WARNING: This calculating method is not so accurate since rotation cannot be directed 'add' together
                     #          since the original RLBench decides to do so, we should follow it
-                    if len(demo_traj) == 0:
-                        action.extend((o2.gripper_pose - o1.gripper_pose) / _DT)
-                    else:
-                        action.extend((o2.gripper_pose - o1.gripper_pose) / _DT - demo_traj[-1]['a'])
+                    v_tar_new = (o_tar.gripper_pose - obs.gripper_pose) / _DT
+                    action.extend(v_tar_new - v_tar)
+                    v_tar = v_tar_new
+                    raise TypeError("Warning, delta_ee_velocity is not currently supported")
 
-                action.append(1.0 if o2.gripper_open > 0.9 else 0.0)
+                action.append(1.0 if o_tar.gripper_open > 0.9 else 0.0)
                 action = np.asarray(action, dtype=np.float32)
-                demo_traj.append({'observation': o1,
+                demo_traj.append({'observation': obs,
                                   'a': action,
-                                  's': o1.get_low_dim_data()})
+                                  's': obs.get_low_dim_data()})
+                obs, reward, done = self.task.step(action)
+                demo_traj[-1]['r'] = reward
+
             demo_pack.append(demo_traj)
         return {"trajectory": demo_pack,
                 "config": "default",
