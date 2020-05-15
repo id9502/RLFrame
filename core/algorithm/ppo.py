@@ -52,7 +52,7 @@ def ppo_step(config: ParamDict, batch: SampleBatch, policy: PolicyWithValue):
 
             """update policy"""
             log_probs, entropy = policy.policy_net.get_log_prob_entropy(states_i, actions_i)
-            ratio = torch.exp(log_probs - log_probs_i)
+            ratio = (log_probs - log_probs_i).clamp_max(15.).exp()
             surr1 = ratio * advantages_i
             surr2 = torch.clamp(ratio, 1.0 - clip_epsilon, 1.0 + clip_epsilon) * advantages_i
             policy_surr = -torch.min(surr1, surr2).mean() - entropy.mean() * lam_entropy
