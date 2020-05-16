@@ -14,7 +14,7 @@ def normal_log_density(x, mean, log_std):
 
 class PolicyNet(NN):
     LOG_SIG_MAX = 2
-    LOG_SIG_MIN = -20
+    LOG_SIG_MIN = -2
     is_disc_action = False
 
     def __init__(self, state_dim, action_dim, hidden_size=(256, 256), activation="relu"):
