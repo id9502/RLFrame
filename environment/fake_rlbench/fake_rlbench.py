@@ -70,6 +70,8 @@ class FakeRLBenchEnv(Environment):
             self.task = self.env.get_task(get_named_class(self._task_name, tasks))
 
     def reset(self, random: bool = True) -> StepDict:
+        if not random:
+            np.random.seed(0)
         self.task._static_positions = not random
         descriptions, obs = self.task.reset()
         # Returns a list of descriptions and the first observation
@@ -154,7 +156,7 @@ class FakeRLBenchEnv(Environment):
         :return: observation list : [amount x [(steps-1) x [s, a] + [s_term, None]]],
                  WARNING: that the action here is calculated from observation, when executing, they may cause some inaccuracy
         """
-        seeds = [rnd.randint(0, 4096) for _ in range(amount)]
+        seeds = [rnd.randint(0, 4096) if random else 0 for _ in range(amount)]
         self.task._static_positions = not random
 
         demo_pack = []
